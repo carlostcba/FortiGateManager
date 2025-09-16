@@ -812,3 +812,397 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* ========================================
+   ESTILOS ADICIONALES PARA AUTENTICACION
+   AGREGAR AL FINAL DEL ARCHIVO styles.css EXISTENTE
+   ======================================== */
+
+/* Mejoras para notificaciones con informacion de usuario */
+.notification-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.notification-user {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 0.25rem;
+    opacity: 0.8;
+}
+
+.notification-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+.notification {
+    position: relative;
+    padding-right: 3rem; /* Espacio para el boton de cerrar */
+}
+
+/* Estilos para elementos de administrador */
+.admin-badge {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.admin-only {
+    display: none; /* Por defecto oculto, se muestra via JavaScript si es admin */
+}
+
+/* Estilos para informacion del usuario en el header */
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    object-fit: cover;
+}
+
+.user-info-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
+    margin: 0;
+}
+
+.user-email {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+.logout-btn {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Estilos para estados de carga de autenticacion */
+.auth-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.auth-loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.auth-loading-text {
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.auth-loading-subtext {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Estilos mejorados para modales de informacion */
+.user-info-modal .modal-body {
+    padding: 1.5rem;
+}
+
+.user-profile-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.user-profile-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid var(--primary-color);
+    object-fit: cover;
+}
+
+.user-profile-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.user-profile-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.user-permissions-section {
+    background: var(--background-color);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.permission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.permission-item:last-child {
+    margin-bottom: 0;
+}
+
+.permission-label {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.permission-value {
+    font-size: 0.9rem;
+}
+
+.status-active {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.status-admin {
+    color: var(--warning-color);
+    font-weight: 500;
+}
+
+/* Animaciones para transiciones de autenticacion */
+.fade-out {
+    animation: fadeOut 0.3s ease;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { 
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to { 
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Estilos responsivos para elementos de usuario */
+@media (max-width: 768px) {
+    .user-info-container {
+        display: none; /* Ocultar nombre en pantallas pequenas */
+    }
+    
+    .logout-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+    }
+    
+    .admin-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .user-profile-section {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+    
+    .user-profile-avatar {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logout-btn {
+        font-size: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        padding: 0;
+        justify-content: center;
+    }
+    
+    .logout-btn::before {
+        content: '🚪';
+        font-size: 0.9rem;
+    }
+    
+    .notification {
+        margin: 0.5rem;
+        border-radius: var(--radius-md);
+    }
+    
+    .notification-close {
+        top: 0.25rem;
+        right: 0.25rem;
+        width: 20px;
+        height: 20px;
+        font-size: 1rem;
+    }
+}
+
+/* Estilos para indicadores de sesion */
+.session-indicator {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-md);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.session-indicator.show {
+    opacity: 1;
+}
+
+.session-indicator.warning {
+    border-color: var(--warning-color);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.session-indicator.error {
+    border-color: var(--error-color);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Estilos para tooltips de usuario */
+.user-tooltip {
+    position: relative;
+}
+
+.user-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1001;
+    margin-bottom: 0.25rem;
+}
+
+.user-tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.8);
+    z-index: 1001;
+}
+
+/* Utilities adicionales */
+.text-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.user-status::before {
+    content: '●';
+    color: var(--success-color);
+    font-size: 0.6rem;
+}
+
+.user-status.offline::before {
+    color: var(--error-color);
+}
+
+.user-status.away::before {
+    color: var(--warning-color);
+}
