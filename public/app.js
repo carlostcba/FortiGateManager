@@ -6,28 +6,192 @@ let selectedDevice = null;
 let availableMembers = [];
 let currentMembers = [];
 
+// Variables de autenticación
+let currentUser = null;
+let authCheckInterval = null;
+
 // Inicializacion de la aplicacion
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado, iniciando aplicacion con autenticacion...');
+    
+    // Verificar si estamos en la pagina de login
+    if (window.location.pathname === '/login') {
+        console.log('En pagina de login, saltando inicializacion de app');
+        return;
+    }
+    
+    // Inicializar la aplicacion (que ahora incluye verificacion de auth)
     initializeApp();
     setupEventListeners();
-    connectWebSocket();
     checkConnectionStatus();
+    
+    // Agregar listener para errores globales no manejados
+    window.addEventListener('error', function(e) {
+        console.error('Error global:', e.error);
+        handleConnectionError(e.error, 'aplicacion');
+    });
+    
+    // Manejar promesas rechazadas globalmente
+    window.addEventListener('unhandledrejection', function(e) {
+        console.error('Promesa rechazada:', e.reason);
+        handleConnectionError(e.reason, 'promesa');
+        e.preventDefault();
+    });
 });
 
 function initializeApp() {
     console.log('Inicializando FortiGate Manager...');
     
-    // Configurar tabs
-    setupTabs();
+    // PRIMERO verificar autenticacion antes de continuar
+    checkAuthStatus().then(() => {
+        // Solo continuar si esta autenticado
+        setupTabs();
+        setupMacInputs();
+        
+        // Cargar datos iniciales con delay
+        setTimeout(() => {
+            loadDevices();
+            loadGroups();
+        }, 1000);
+        
+        // Configurar verificacion periodica de autenticacion
+        authCheckInterval = setInterval(checkAuthStatus, 5 * 60 * 1000); // cada 5 minutos
+        
+        // Conectar WebSocket después de autenticación
+        connectWebSocket();
+        
+    }).catch(error => {
+        console.error('Error de autenticacion inicial:', error);
+        redirectToLogin();
+    });
+}
+
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/auth/status');
+        
+        if (!response.ok) {
+            throw new Error('Error verificando autenticacion');
+        }
+        
+        const data = await response.json();
+        
+        if (data.authenticated) {
+            currentUser = data.user;
+            updateUserInterface(data.user);
+            return Promise.resolve();
+        } else {
+            // No autenticado, redirigir
+            redirectToLogin();
+            return Promise.reject('No autenticado');
+        }
+    } catch (error) {
+        console.error('Error verificando autenticacion:', error);
+        redirectToLogin();
+        return Promise.reject(error);
+    }
+}
+
+function updateUserInterface(user) {
+    const headerTitle = document.querySelector('.header-title');
+    if (headerTitle) {
+        headerTitle.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <div>
+                    <h1></h1>
+                    <p></p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; color: white;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <img src="${user.photo}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                            <span style="font-size: 0.9rem; font-weight: 500;">${user.name}</span>
+                            <span style="font-size: 0.75rem; opacity: 0.8;">${user.email}</span>
+                        </div>
+                    </div>
+                    ${user.isAdmin ? '<span style="background: rgba(255,193,7,0.2); color: #ffc107; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; border: 1px solid rgba(255,193,7,0.3);">ADMIN</span>' : ''}
+                    <button id="logoutBtn" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: white; cursor: pointer; font-size: 0.8rem; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                        🚪 Cerrar Sesion
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Agregar event listener al botón
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', logout);
+        }
+    }
     
-    // Configurar inputs MAC
-    setupMacInputs();
+    // Mostrar notificacion de bienvenida (solo la primera vez)
+    if (!sessionStorage.getItem('welcomeShown')) {
+        showNotification('success', 'Bienvenido', `Hola ${user.name}, sesion iniciada correctamente`);
+        sessionStorage.setItem('welcomeShown', 'true');
+    }
+}
+
+function redirectToLogin() {
+    // Limpiar interval de verificacion
+    if (authCheckInterval) {
+        clearInterval(authCheckInterval);
+    }
     
-    // Cargar datos iniciales
+    // Limpiar storage local
+    sessionStorage.clear();
+    
+    // Mostrar mensaje y redirigir
+    showNotification('warning', 'Sesion requerida', 'Redirigiendo al login...');
+    
     setTimeout(() => {
-        loadDevices();
-        loadGroups();
-    }, 1000);
+        window.location.href = '/login';
+    }, 1500);
+}
+
+async function logout() {
+    try {
+        // Mostrar confirmacion
+        if (!confirm('¿Estas seguro de que deseas cerrar sesion?')) {
+            return;
+        }
+        
+        // Deshabilitar interfaz temporalmente
+        document.body.style.pointerEvents = 'none';
+        
+        const response = await fetch('/auth/logout', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('success', 'Sesion cerrada', 'Has cerrado sesion exitosamente');
+            
+            // Limpiar datos locales
+            currentUser = null;
+            sessionStorage.clear();
+            
+            // Limpiar interval
+            if (authCheckInterval) {
+                clearInterval(authCheckInterval);
+            }
+            
+            // Redirigir al login
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1000);
+        } else {
+            document.body.style.pointerEvents = 'auto';
+            showNotification('error', 'Error', data.message || 'Error al cerrar sesion');
+        }
+    } catch (error) {
+        console.error('Error en logout:', error);
+        document.body.style.pointerEvents = 'auto';
+        showNotification('error', 'Error', 'Error de comunicacion al cerrar sesion');
+    }
 }
 
 function setupEventListeners() {
@@ -55,6 +219,36 @@ function setupEventListeners() {
     document.getElementById('diagnosticModal').addEventListener('click', function(e) {
         if (e.target === this) {
             closeDiagnosticModal();
+        }
+    });
+    
+    // Event listeners para teclado (mejoras de UX)
+    document.addEventListener('keydown', function(e) {
+        // Esc para cerrar modales
+        if (e.key === 'Escape') {
+            closeDiagnosticModal();
+        }
+        
+        // Ctrl+L para logout (atajo rapido)
+        if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            logout();
+        }
+    });
+    
+    // Detectar visibilidad de la pestaña para pausar/reanudar verificaciones
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            // Pausar verificaciones cuando la pestaña esta oculta
+            if (authCheckInterval) {
+                clearInterval(authCheckInterval);
+            }
+        } else {
+            // Reanudar verificaciones cuando la pestaña vuelve a estar visible
+            checkAuthStatus().catch(() => {
+                // Error manejado por la funcion
+            });
+            authCheckInterval = setInterval(checkAuthStatus, 5 * 60 * 1000);
         }
     });
 }
@@ -122,10 +316,25 @@ function setupMacInputs() {
 }
 
 function connectWebSocket() {
-    socket = io();
+    // Solo conectar WebSocket si esta autenticado
+    if (!currentUser) {
+        console.log('WebSocket: Esperando autenticacion...');
+        return;
+    }
+    
+    const socketUrl = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000' 
+    : window.location.origin;
+
+    socket = io(socketUrl, {
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    rememberUpgrade: true
+    });
     
     socket.on('connect', function() {
-        console.log('WebSocket conectado');
+        console.log('WebSocket conectado para usuario:', currentUser.email);
+        showNotification('info', 'Conexion establecida', 'WebSocket conectado exitosamente');
     });
     
     socket.on('connection_status', function(data) {
@@ -133,24 +342,39 @@ function connectWebSocket() {
     });
     
     socket.on('object_updated', function(data) {
-        showNotification('success', 'Objeto actualizado', `El objeto ${data.name} ha sido actualizado`);
+        const message = data.user ? 
+            `El objeto ${data.name} ha sido actualizado por ${data.user}` : 
+            `El objeto ${data.name} ha sido actualizado`;
+        showNotification('success', 'Objeto actualizado', message);
         loadDevices();
     });
     
     socket.on('object_deleted', function(data) {
-        showNotification('info', 'Objeto eliminado', `El objeto ${data.name} ha sido eliminado`);
+        const message = data.user ? 
+            `El objeto ${data.name} ha sido eliminado por ${data.user}` : 
+            `El objeto ${data.name} ha sido eliminado`;
+        showNotification('info', 'Objeto eliminado', message);
         loadDevices();
         clearDeviceForm();
     });
     
     socket.on('group_updated', function(data) {
-        showNotification('success', 'Grupo actualizado', `El grupo ${data.name} ha sido actualizado`);
+        const message = data.user ? 
+            `El grupo ${data.name} ha sido actualizado por ${data.user}` : 
+            `El grupo ${data.name} ha sido actualizado`;
+        showNotification('success', 'Grupo actualizado', message);
         loadGroups();
     });
     
     socket.on('disconnect', function() {
         console.log('WebSocket desconectado');
         updateConnectionStatus(false, 'Conexion WebSocket perdida');
+    });
+    
+    socket.on('auth_error', function(data) {
+        console.error('Error de autenticacion en WebSocket:', data);
+        showNotification('error', 'Error de autenticacion', 'Sesion invalida en WebSocket');
+        redirectToLogin();
     });
 }
 
@@ -163,6 +387,10 @@ async function checkConnectionStatus() {
         
         if (data.config) {
             console.log('Configuracion:', data.config);
+        }
+        
+        if (data.user) {
+            console.log('Usuario autenticado:', data.user.email);
         }
     } catch (error) {
         console.error('Error al verificar estado:', error);
@@ -289,8 +517,7 @@ function renderDevicesTable(devices) {
     
     devicesList.innerHTML = html;
 
-    // ----- CAMBIO REALIZADO 2/2 -----
-    // Se añaden los 'event listeners' a los botones de forma segura.
+    // Se añaden los event listeners a los botones de forma segura
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', (event) => {
             const deviceName = event.currentTarget.getAttribute('data-name');
@@ -621,9 +848,24 @@ function showNotification(type, title, message) {
     
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    
+    // Agregar icono segun el tipo
+    let icon = '';
+    switch(type) {
+        case 'success': icon = '✅'; break;
+        case 'error': icon = '❌'; break;
+        case 'warning': icon = '⚠️'; break;
+        case 'info': icon = 'ℹ️'; break;
+        default: icon = '📌'; break;
+    }
+    
     notification.innerHTML = `
-        <div class="notification-title">${title}</div>
-        <div class="notification-message">${message}</div>
+        <div class="notification-content">
+            <div class="notification-title">${icon} ${title}</div>
+            <div class="notification-message">${message}</div>
+            ${currentUser ? `<div class="notification-user">Usuario: ${currentUser.name}</div>` : ''}
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
     `;
     
     container.appendChild(notification);
@@ -635,12 +877,103 @@ function showNotification(type, title, message) {
         }
     }, 5000);
     
-    // Permitir cerrar al hacer clic
-    notification.addEventListener('click', () => {
+    // Permitir cerrar al hacer clic en la notificacion
+    notification.addEventListener('click', (e) => {
+        if (e.target.classList.contains('notification-close')) return;
         if (notification.parentNode) {
             notification.parentNode.removeChild(notification);
         }
     });
+}
+
+// FUNCIONES DE UTILIDAD PARA AUTENTICACION
+
+// Verificar si el usuario actual es administrador
+function isCurrentUserAdmin() {
+    return currentUser && currentUser.isAdmin === true;
+}
+
+// Mostrar/ocultar elementos segun permisos de usuario
+function updateUIBasedOnPermissions() {
+    const adminElements = document.querySelectorAll('.admin-only');
+    const userInfo = document.querySelectorAll('.user-info');
+    
+    if (isCurrentUserAdmin()) {
+        adminElements.forEach(el => el.style.display = 'block');
+    } else {
+        adminElements.forEach(el => el.style.display = 'none');
+    }
+    
+    // Mostrar informacion del usuario en elementos relevantes
+    userInfo.forEach(el => {
+        if (currentUser) {
+            el.textContent = `${currentUser.name} (${currentUser.email})`;
+        }
+    });
+}
+
+// Manejar errores de conexion especificos
+function handleConnectionError(error, context = '') {
+    console.error(`Error de conexion ${context}:`, error);
+    
+    if (error.message && error.message.includes('Failed to fetch')) {
+        showNotification('error', 'Error de conexion', 'No se puede conectar al servidor. Verifica tu conexion a internet.');
+    } else if (error.message && error.message.includes('NetworkError')) {
+        showNotification('error', 'Error de red', 'Error de red. El servidor podria estar fuera de linea.');
+    } else {
+        showNotification('error', 'Error', `Error en ${context}: ${error.message}`);
+    }
+}
+
+// Mostrar informacion del usuario en tiempo real
+function showUserInfo() {
+    if (!currentUser) return;
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Informacion del Usuario</h3>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <img src="${currentUser.photo}" alt="Avatar" style="width: 64px; height: 64px; border-radius: 50%;">
+                    <div>
+                        <h4 style="margin: 0;">${currentUser.name}</h4>
+                        <p style="margin: 0; color: #666;">${currentUser.email}</p>
+                        <p style="margin: 0; color: #666;">${currentUser.domain || 'Sin dominio'}</p>
+                    </div>
+                </div>
+                <div style="background: #f5f5f5; padding: 1rem; border-radius: 6px;">
+                    <strong>Permisos:</strong> ${currentUser.isAdmin ? 'Administrador' : 'Usuario'}<br>
+                    <strong>Sesion iniciada:</strong> ${new Date().toLocaleString()}<br>
+                    <strong>Estado:</strong> <span style="color: green;">Activo</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Auto-cerrar al hacer clic fuera
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
+        }
+    });
+}
+
+// Funciones para desarrollo y debugging
+function getAuthDebugInfo() {
+    return {
+        currentUser: currentUser,
+        isAuthenticated: !!currentUser,
+        isAdmin: isCurrentUserAdmin(),
+        sessionStorage: Object.keys(sessionStorage),
+        authCheckInterval: !!authCheckInterval
+    };
 }
 
 // Funciones utilitarias
@@ -656,19 +989,64 @@ function debounce(func, wait) {
     };
 }
 
-// Manejo de errores global
+// INTERCEPTOR PARA MANEJAR ERRORES DE AUTENTICACION
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    try {
+        const response = await originalFetch.apply(this, args);
+        
+        // Interceptar errores de autenticacion
+        if (response.status === 401) {
+            try {
+                const data = await response.clone().json();
+                if (data.requiresAuth) {
+                    console.warn('Sesion expirada detectada');
+                    showNotification('warning', 'Sesion expirada', 'Tu sesion ha expirado. Redirigiendo al login...');
+                    
+                    setTimeout(() => {
+                        redirectToLogin();
+                    }, 2000);
+                }
+            } catch (e) {
+                // Si no se puede parsear JSON, asumir que necesita auth
+                redirectToLogin();
+            }
+        }
+        
+        // Interceptar errores de permisos
+        if (response.status === 403) {
+            try {
+                const data = await response.clone().json();
+                showNotification('error', 'Permisos insuficientes', data.message || 'No tienes permisos para esta accion');
+            } catch (e) {
+                showNotification('error', 'Error', 'No tienes permisos para realizar esta accion');
+            }
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('Error en fetch:', error);
+        throw error;
+    }
+};
+
+// Manejo de errores global (mantener funcionalidad original)
 window.addEventListener('error', function(e) {
     console.error('Error global:', e.error);
     showNotification('error', 'Error', 'Ha ocurrido un error inesperado');
 });
 
-// Manejo de promesas rechazadas
+// Manejo de promesas rechazadas (mantener funcionalidad original)
 window.addEventListener('unhandledrejection', function(e) {
     console.error('Promesa rechazada:', e.reason);
     showNotification('error', 'Error', 'Error de comunicacion con el servidor');
     e.preventDefault();
 });
 
-// ----- CAMBIO REALIZADO: Se elimina esta línea -----
-// Ya no es necesario exponer la función globalmente
-// window.selectDevice = selectDevice;
+// Exponer funciones de desarrollo en modo desarrollo
+if (window.location.hostname === 'localhost') {
+    window.debugAuth = getAuthDebugInfo;
+    window.forceLogout = logout;
+    window.showUserInfo = showUserInfo;
+    console.log('🔧 Funciones de debug disponibles: debugAuth(), forceLogout(), showUserInfo()');
+}
