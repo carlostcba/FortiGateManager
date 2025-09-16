@@ -25,7 +25,7 @@ Aplicacion web para gestionar objetos de direcciones y grupos en firewalls Forti
 
 1. **Clonar el repositorio:**
 ```bash
-git clone https://github.com/carlostcba/FortiGateManager.git
+git clone <url-del-repositorio>
 cd fortigate-manager
 ```
 
@@ -47,8 +47,8 @@ HOST=localhost
 NODE_ENV=development
 
 # Configuracion de FortiGate
-FORTIGATE_HOST=10.0.10.1
-FORTIGATE_USERNAME=admin
+FORTIGATE_HOST=10.0.0.1
+FORTIGATE_USERNAME=usuario
 FORTIGATE_PASSWORD=tu_password_aqui
 FORTIGATE_PORT=22
 FORTIGATE_TIMEOUT=20000
@@ -200,17 +200,35 @@ La aplicacion utiliza WebSocket para actualizaciones en tiempo real:
 ## Variables de Entorno Requeridas
 
 ```env
-# OBLIGATORIAS
-FORTIGATE_HOST=ip_del_fortigate
-FORTIGATE_USERNAME=usuario_ssh
-FORTIGATE_PASSWORD=password_ssh
-
-# OPCIONALES (con valores por defecto)
+# Configuración del servidor  
 PORT=3000
-HOST=localhost  
+HOST=0.0.0.0
+NODE_ENV=development
+
+# Configuración de FortiGate
+FORTIGATE_HOST=10.0.0.1
+FORTIGATE_USERNAME=usuario
+FORTIGATE_PASSWORD=tu_password_aqui
 FORTIGATE_PORT=22
 FORTIGATE_TIMEOUT=20000
-NODE_ENV=development
+
+# Autenticación Google OAuth 2.0
+GOOGLE_CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-_XXXXXXXXXXXXXX_XXXXXXXXXXXXXXX
+GOOGLE_CALLBACK_URL=https://tudominio.com/auth/google/callback
+GOOGLE_WORKSPACE_DOMAIN=tudominio.com
+
+# Seguridad de sesiones
+SESSION_SECRET=genera-una-clave-aleatoria-de-64-caracteres-aqui
+
+# CONFIGURACIÓN DE PROXY - AGREGAR ESTAS LÍNEAS
+TRUST_PROXY=true
+BEHIND_PROXY=true
+
+# CONFIGURACIÓN DE SESIÓN MEJORADA - AGREGAR ESTAS LÍNEAS  
+SESSION_NAME=fortigate_session
+SESSION_MAX_AGE=86400000
+SESSION_SECURE=false
 ```
 
 ## Troubleshooting
@@ -293,4 +311,3 @@ Para reportar bugs o solicitar nuevas funcionalidades:
 - Crear un issue en el repositorio del proyecto
 - Incluir logs relevantes y pasos para reproducir el problema
 - Especificar version de Node.js y sistema operativo
-
