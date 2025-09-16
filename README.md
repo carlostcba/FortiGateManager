@@ -35,7 +35,7 @@ Aplicacion web segura para gestionar objetos de direcciones y grupos en firewall
 
 1. **Clonar el repositorio:**
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/carlostcba/FortiGateManager.git
 cd fortigate-manager
 ```
 
@@ -502,3 +502,4 @@ Para reportar bugs o solicitar nuevas funcionalidades:
 ## Seguridad
 
 Si encuentras vulnerabilidades de seguridad, por favor reportalas de forma privada al maintainer del proyecto antes de crear un issue publico.
+
