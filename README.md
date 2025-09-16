@@ -1,25 +1,27 @@
-# FortiGate Manager - Aplicación Node.js
+# FortiGate Manager - Aplicacion Node.js
 
-Aplicación web para gestionar objetos de direcciones y grupos en firewalls FortiGate mediante conexión SSH.
+Aplicacion web para gestionar objetos de direcciones y grupos en firewalls FortiGate mediante conexion SSH.
 
-## Características
+## Caracteristicas
 
-- **Conexión SSH automática** usando configuración desde archivo `.env`
-- **Gestión de objetos MAC** con prefijo ELS- automático
-- **Administración del grupo ELS-APP** con interfaz drag-and-drop
+- **Auto-conexion SSH** usando configuracion desde archivo `.env` al iniciar
+- **Verificaciones automaticas** del entorno antes de ejecutar 
+- **Gestion de objetos MAC** con prefijo ELS- automatico y validacion en tiempo real
+- **Administracion del grupo ELS-APP** con interfaz de transferencia de miembros
 - **Interfaz web moderna** con WebSocket para actualizaciones en tiempo real
-- **Diagnóstico de conexión** integrado
-- **Notificaciones** en tiempo real
-- **Responsive design** para dispositivos móviles
+- **Diagnostico de conexion** integrado con pruebas de DNS, ping y puerto SSH
+- **Sistema de notificaciones** con diferentes tipos (exito, error, advertencia)
+- **Responsive design** para dispositivos moviles
+- **Estados de conexion** visuales (conectado, desconectado, conectando)
 
 ## Requisitos Previos
 
 - Node.js >= 16.0.0
 - npm o yarn
 - Acceso SSH al FortiGate
-- Usuario con permisos de administración en FortiGate
+- Usuario con permisos de administracion en FortiGate
 
-## Instalación
+## Instalacion
 
 1. **Clonar el repositorio:**
 ```bash
@@ -39,144 +41,255 @@ cp .env.example .env
 
 4. **Editar el archivo `.env`** con tus credenciales:
 ```env
-# Configuración del servidor
+# Configuracion del servidor
 PORT=3000
 HOST=localhost
 NODE_ENV=development
 
-# Configuración de FortiGate
+# Configuracion de FortiGate
 FORTIGATE_HOST=10.0.10.1
 FORTIGATE_USERNAME=admin
 FORTIGATE_PASSWORD=tu_password_aqui
 FORTIGATE_PORT=22
 FORTIGATE_TIMEOUT=20000
-
-# Configuración de seguridad
-SESSION_SECRET=tu_session_secret_aqui
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
 ```
 
 ## Uso
 
-### Modo Desarrollo
-```bash
-npm run dev
-```
+### Iniciar la aplicacion
 
-### Modo Producción
+**Metodo recomendado (con verificaciones):**
 ```bash
 npm start
 ```
 
-La aplicación estará disponible en `http://localhost:3000`
+**Para desarrollo con auto-reinicio:**
+```bash
+npm run dev
+```
+
+**Ejecutar servidor directamente (sin verificaciones):**
+```bash
+npm run server
+```
+
+La aplicacion estara disponible en `http://localhost:3000`
+
+### Verificaciones automaticas
+
+Al ejecutar `npm start`, la aplicacion realiza las siguientes verificaciones:
+
+- ✓ Version de Node.js compatible (>= 16.0.0)
+- ✓ Existencia del archivo `.env`  
+- ✓ Variables de entorno requeridas
+- ✓ Estructura de directorios correcta
+- ✓ Archivos principales del proyecto
+- ✓ Dependencias instaladas
+- ✓ Auto-conexion al FortiGate
 
 ## Funcionalidades
 
-### 1. Gestión de Objetos MAC
+### 1. Gestion de Objetos MAC
 
-- **Crear objetos**: Interfaz intuitiva para ingresar direcciones MAC
-- **Editar objetos**: Selecciona cualquier objeto de la lista para editarlo
-- **Eliminar objetos**: Función de eliminación con confirmación
-- **Filtrado**: Filtra objetos por tipo (MAC, subnet, FQDN, range)
-- **Prefijo automático**: Todos los objetos se crean con prefijo "ELS-"
+- **Crear objetos**: Interfaz intuitiva con campos MAC validados
+- **Auto-formato**: Los campos MAC se formatean automaticamente (XX:XX:XX:XX:XX:XX)
+- **Editar objetos**: Selecciona cualquier objeto de la tabla para editarlo
+- **Eliminar objetos**: Funcion de eliminacion con confirmacion
+- **Filtrado**: Filtra objetos por tipo (todos, MAC, subnet, FQDN, range)
+- **Prefijo automatico**: Todos los objetos se crean con prefijo "ELS-"
+- **Actualizacion en tiempo real**: Los cambios se reflejan inmediatamente via WebSocket
 
-### 2. Gestión de Grupos
+### 2. Gestion de Grupos
 
-- **Grupo ELS-APP**: Administración específica del grupo de aplicaciones
+- **Grupo ELS-APP**: Administracion especifica del grupo de aplicaciones
 - **Transferencia de miembros**: Mueve objetos entre disponibles y miembros actuales
-- **Actualización en tiempo real**: Los cambios se reflejan inmediatamente
+- **Seleccion multiple**: Permite seleccionar varios objetos para transferir
+- **Ordenamiento automatico**: Las listas se ordenan alfabeticamente
+- **Sincronizacion**: Los cambios se sincronizan en tiempo real
 
-### 3. Conexión y Diagnóstico
+### 3. Conexion y Diagnostico  
 
-- **Auto-conexión**: Conecta automáticamente al iniciar usando `.env`
-- **Reconexión manual**: Botón para reestablecer conexión si es necesario
-- **Diagnóstico completo**: Prueba DNS, ping y conectividad SSH
-- **Estado en tiempo real**: Indicador visual del estado de conexión
+- **Auto-conexion**: Conecta automaticamente al iniciar usando configuracion `.env`
+- **Estados visuales**: Indicador de estado (conectado/desconectado/conectando)
+- **Reconexion manual**: Boton para reestablecer conexion cuando sea necesario
+- **Diagnostico completo**: Prueba DNS, ping y conectividad al puerto SSH
+- **Mensajes informativos**: Notificaciones detalladas sobre el estado de la conexion
+
+### 4. Sistema de Notificaciones
+
+- **Tipos**: Exito (verde), Error (rojo), Advertencia (amarillo), Info (azul)  
+- **Auto-dismiss**: Las notificaciones se ocultan automaticamente despues de 5 segundos
+- **Click to dismiss**: Haz clic en cualquier notificacion para ocultarla
+- **Posicion fija**: Aparecen en la esquina superior derecha
 
 ## Estructura del Proyecto
 
 ```
 fortigate-manager/
 ├── lib/
-│   └── FortiGateManager.js    # Clase principal para SSH
+│   └── FortiGateManager.js    # Clase principal para conexion SSH
 ├── public/
-│   ├── index.html             # Interfaz principal
-│   ├── app.js                 # Lógica del frontend
-│   └── styles.css             # Estilos CSS
-├── server.js                  # Servidor Express
-├── package.json               # Dependencias del proyecto
-├── .env.example              # Plantilla de configuración
-└── README.md                 # Esta documentación
+│   ├── index.html             # Interfaz web principal
+│   ├── app.js                 # Logica del frontend y WebSocket
+│   └── styles.css             # Estilos CSS responsivos
+├── start.js                   # Script de inicio con verificaciones
+├── server.js                  # Servidor Express con API REST
+├── package.json               # Configuracion del proyecto y dependencias
+├── .env.example              # Plantilla de configuracion
+└── README.md                 # Documentacion del proyecto
 ```
 
 ## API Endpoints
 
-### Estado y Conexión
-- `GET /api/status` - Estado actual de la conexión
-- `POST /api/reconnect` - Reconectar al FortiGate
-- `GET /api/diagnose` - Ejecutar diagnóstico de conexión
+### Estado y Conexion
+- `GET /api/status` - Estado actual de la conexion SSH
+- `POST /api/reconnect` - Reconectar manualmente al FortiGate  
+- `GET /api/diagnose` - Ejecutar diagnostico completo de conexion
 
 ### Objetos ELS
-- `GET /api/els-objects?type=mac` - Obtener objetos filtrados por tipo
-- `POST /api/els-objects` - Crear/actualizar objeto
-- `DELETE /api/els-objects/:name` - Eliminar objeto
+- `GET /api/els-objects` - Obtener todos los objetos ELS
+- `GET /api/els-objects?type=mac` - Filtrar objetos por tipo (mac, subnet, fqdn, range)
+- `POST /api/els-objects` - Crear o actualizar objeto ELS
+- `DELETE /api/els-objects/:name` - Eliminar objeto especifico
+
+**Formato para crear objeto:**
+```json
+{
+  "name": "DISPOSITIVO_EJEMPLO",
+  "type": "mac", 
+  "value": "aa:bb:cc:dd:ee:ff"
+}
+```
 
 ### Grupos de Direcciones
-- `GET /api/address-groups` - Obtener grupos (específicamente ELS-APP)
-- `PUT /api/address-groups/ELS-APP` - Actualizar miembros del grupo
+- `GET /api/address-groups` - Obtener grupos (especificamente ELS-APP)
+- `PUT /api/address-groups/ELS-APP` - Actualizar miembros del grupo ELS-APP
 
-## Configuración de Seguridad
+**Formato para actualizar grupo:**
+```json
+{
+  "members": ["ELS-DISPOSITIVO1", "ELS-DISPOSITIVO2"]
+}
+```
 
-La aplicación incluye las siguientes medidas de seguridad:
+## Configuracion de Seguridad
 
-- **Helmet.js**: Headers de seguridad HTTP
-- **Rate limiting**: Límite de requests por IP
-- **CORS**: Configuración de cross-origin requests
-- **Validación de entrada**: Validación de todos los datos recibidos
-- **Variables de entorno**: Credenciales nunca hardcodeadas
+La aplicacion incluye las siguientes medidas de seguridad:
+
+- **Helmet.js**: Headers de seguridad HTTP estandar
+- **Rate limiting**: Limitacion de requests por IP 
+- **CORS**: Configuracion de cross-origin requests
+- **Validacion de entrada**: Validacion con express-validator para todos los endpoints
+- **Variables de entorno**: Credenciales nunca hardcodeadas en el codigo
+- **Middleware de autorizacion**: Verificacion de conexion SSH antes de operaciones
 
 ## WebSocket Events
 
-La aplicación usa WebSocket para actualizaciones en tiempo real:
+La aplicacion utiliza WebSocket para actualizaciones en tiempo real:
 
-- `connection_status` - Cambios en el estado de conexión
-- `object_updated` - Objeto creado/actualizado
-- `object_deleted` - Objeto eliminado
-- `group_updated` - Grupo actualizado
+**Eventos del servidor:**
+- `connection_status` - Cambios en el estado de conexion SSH
+- `object_updated` - Notifica cuando un objeto es creado o actualizado
+- `object_deleted` - Notifica cuando un objeto es eliminado
+- `group_updated` - Notifica cuando el grupo ELS-APP es actualizado
+
+**Estados de conexion:**
+- `connected: true/false` - Booleano del estado de conexion
+- `message: string` - Mensaje descriptivo del estado actual
+
+## Variables de Entorno Requeridas
+
+```env
+# OBLIGATORIAS
+FORTIGATE_HOST=ip_del_fortigate
+FORTIGATE_USERNAME=usuario_ssh
+FORTIGATE_PASSWORD=password_ssh
+
+# OPCIONALES (con valores por defecto)
+PORT=3000
+HOST=localhost  
+FORTIGATE_PORT=22
+FORTIGATE_TIMEOUT=20000
+NODE_ENV=development
+```
 
 ## Troubleshooting
 
-### Error de Conexión SSH
+### Error de Variables de Entorno
+```
+❌ Error: Variables de entorno faltantes: FORTIGATE_HOST
+```
+**Solucion:** Verifica que el archivo `.env` existe y contiene todas las variables requeridas.
 
-1. Verificar que las credenciales en `.env` sean correctas
-2. Confirmar que el FortiGate esté accesible en la red
-3. Usar el diagnóstico integrado para identificar el problema
+### Error de Conexion SSH
+```
+❌ Error: Conexion rechazada - Verifica IP y puerto
+```  
+**Solucion:** 
+1. Usar el diagnostico integrado (`/api/diagnose`)
+2. Verificar conectividad de red al FortiGate
+3. Confirmar que SSH este habilitado en el FortiGate
 
-### Error de Autenticación
+### Error de Autenticacion
+```
+❌ Error: Error de autenticacion - Usuario o contraseña incorrectos
+```
+**Solucion:**
+1. Verificar credenciales en archivo `.env`
+2. Confirmar que el usuario tiene permisos de administracion
+3. Probar login manual via SSH para validar credenciales
 
-1. Verificar usuario y contraseña en `.env`
-2. Confirmar que el usuario tenga permisos de administración
-3. Verificar que SSH esté habilitado en el FortiGate
+### Error de Permisos
+```
+❌ Error: No hay conexion SSH activa al FortiGate
+```
+**Solucion:**
+1. Usar boton "Reconectar" en la interfaz
+2. Verificar estado de conexion en la parte superior
+3. Revisar logs del servidor para mas detalles
 
-### Error de Comandos
+## Comandos de Desarrollo
 
-1. Confirmar que el usuario tenga permisos para modificar objetos
-2. Verificar que no haya políticas que bloqueen los cambios
-3. Revisar logs del FortiGate para más detalles
+```bash
+# Instalar dependencias
+npm install
 
-## Contribución
+# Verificar entorno e iniciar
+npm start
+
+# Modo desarrollo con nodemon
+npm run dev
+
+# Solo servidor (sin verificaciones)
+npm run server
+
+# Verificar version de Node
+node --version
+```
+
+## Tecnologias Utilizadas
+
+- **Backend:** Node.js, Express.js, Socket.io
+- **Frontend:** HTML5, CSS3 (sin frameworks), JavaScript vanilla
+- **SSH:** node-ssh para conexiones seguras
+- **Seguridad:** Helmet, express-rate-limit, express-validator
+- **Utilidades:** dotenv, cors
+
+## Licencia
+
+Este proyecto esta bajo la Licencia MIT. 
+
+## Contribucion
 
 1. Fork el proyecto
-2. Crea una rama feature (`git checkout -b feature/nueva-funcionalidad`)
+2. Crea una rama feature (`git checkout -b feature/nueva-funcionalidad`)  
 3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
 4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
 5. Crear un Pull Request
 
-## Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
 ## Soporte
 
-Para reportar bugs o solicitar funcionalidades, crea un issue en el repositorio del proyecto.
+Para reportar bugs o solicitar nuevas funcionalidades:
+- Crear un issue en el repositorio del proyecto
+- Incluir logs relevantes y pasos para reproducir el problema
+- Especificar version de Node.js y sistema operativo
